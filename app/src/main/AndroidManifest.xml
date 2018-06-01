@@ -20,6 +20,10 @@
         <service
             android:name=".ServerService"
             android:enabled="true"
+            android:exported="true" />
+        <service
+            android:name=".ServicioMensajeria"
+            android:enabled="true"
             android:exported="true"></service>
     </application>
 
