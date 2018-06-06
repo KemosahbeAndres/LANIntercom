@@ -30,6 +30,7 @@
         android:layout_marginStart="16dp"
         android:layout_marginTop="16dp"
         android:text="Buscar"
+        android:onClick="stopThread"
         app:layout_constraintEnd_toStartOf="@+id/iniciar"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />

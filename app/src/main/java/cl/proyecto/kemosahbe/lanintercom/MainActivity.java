@@ -74,11 +74,11 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onStart() {
         super.onStart();
-        //messenger = new Messenger(new mHandler());
+        messenger = new Messenger(new mHandler());
     }
 
     public void iniciar(View v){
-        Intent intent = new Intent(this, ServicioMensajeria.class);
+        Intent intent = new Intent(this, ScoutService.class);
         if(iniciado){
             try {
                 unbindService(mConnection);
@@ -90,7 +90,7 @@ public class MainActivity extends AppCompatActivity {
         }else {
             try {
                 intent.putExtra("messenger", messenger);
-                intent.putExtra("serverAddress","239.255.255.249");
+                intent.putExtra("serverAddress","230.255.255.200");
                 intent.putExtra("serverPort", 1800);
                 bindService(intent, mConnection, Service.BIND_AUTO_CREATE);
                 txt.setText("Servicio Iniciado");
@@ -98,6 +98,14 @@ public class MainActivity extends AppCompatActivity {
             } catch (Exception e) {
                 e.printStackTrace();
             }
+        }
+    }
+    public void stopThread(View v){
+        Message msge = Message.obtain();
+        try {
+            sMessenger.send(msge);
+        } catch (RemoteException e) {
+            e.printStackTrace();
         }
     }
 
@@ -211,12 +219,12 @@ public class MainActivity extends AppCompatActivity {
             //InetAddress groupAddr = null;
 
             try {
-                NetworkInterface Interf = NetworkInterface.getByName("wlan0");
+                //NetworkInterface Interf = NetworkInterface.getByName("wlan0");
                 MulticastSocket socket  = new MulticastSocket();
                 socket.setReuseAddress(true);
                 Log.i(tag,"Multicast Sender running at: "+socket.getLocalSocketAddress());
-                socket.setNetworkInterface(Interf);
-                InetAddress addr = InetAddress.getByName("239.255.255.249");
+                //socket.setNetworkInterface(Interf);
+                InetAddress addr = InetAddress.getByName("230.255.255.200");
                 socket.joinGroup(addr);
 
                 byte[] data = buffer.getBytes();
