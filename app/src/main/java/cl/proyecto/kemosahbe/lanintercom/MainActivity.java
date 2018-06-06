@@ -25,6 +25,9 @@ import android.widget.Toast;
 
 import org.w3c.dom.Text;
 
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -42,8 +45,14 @@ import java.util.Collections;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.Locale;
+import java.util.Properties;
+import java.util.UUID;
 
 public class MainActivity extends AppCompatActivity {
+    public final String configFile = "Config.properties";
+    private FileInputStream fis;
+    private FileOutputStream fos;
+    private Properties properties;
     TextView txt;
     EditText msg;
     Boolean iniciado = false;
@@ -56,7 +65,10 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        //initProperties();
         Log.i(tag, "Servicio Creado: "+Thread.currentThread().getName()+" ("+Thread.currentThread().getId()+")");
+        //UUID uuid = UUID.fromString("AndresCubillos");
+        //Log.i(tag, ""+uuid.toString());
         txt = (TextView) findViewById(R.id.texto);
         msg = (EditText) findViewById(R.id.msg);
         txt.setText("Servicio No iniciado");
@@ -68,6 +80,25 @@ public class MainActivity extends AppCompatActivity {
         WifiInfo wi = wm.getConnectionInfo();
         if(wi != null){
             Log.i(tag, "get BSSID: "+wi.getBSSID()+" MAC: "+wi.getMacAddress()+" IPV4: "+wi.getIpAddress());
+        }
+    }
+
+    private void initProperties(){
+        //Intentar leer archivo de configuracion.
+        try {
+            fis = new FileInputStream(configFile);
+        }catch(FileNotFoundException ex){
+            Log.i(tag, "Archivo de configuracion no encontrado.\n\rCreando archivo de configuracion.");
+            try {
+                fos = openFileOutput(configFile, Context.MODE_PRIVATE);
+                fos.close();
+            }catch(FileNotFoundException e){
+                e.printStackTrace();
+            }catch(IOException ioe){
+                ioe.printStackTrace();
+            }
+        }finally {
+            //codigo para tratar el archivo de configuracion.
         }
     }
 
@@ -227,7 +258,11 @@ public class MainActivity extends AppCompatActivity {
                 InetAddress addr = InetAddress.getByName("230.255.255.200");
                 socket.joinGroup(addr);
 
-                byte[] data = buffer.getBytes();
+                //byte[] data = buffer.getBytes();
+                byte[] data = ("UUID:1a561d-65ds1ds5-f1sd51f\n\r" +
+                        "TYPE:node.user\n\r" +
+                        "NAME:Andres\n\r" +
+                        "ADDRESS:162.168.0.16").getBytes();
                 DatagramPacket dp = new DatagramPacket(data,data.length, addr, 1800);
 
                 socket.send(dp);

@@ -23,7 +23,7 @@ import java.nio.ByteBuffer;
 public class ScoutService extends Service implements ScoutEvent {
 
     //Variables Privadas
-    private
+    //private
     private Messenger sMessenger, mMessenger;
     private ServiceHandler mHandler;
     private Scout mScout;

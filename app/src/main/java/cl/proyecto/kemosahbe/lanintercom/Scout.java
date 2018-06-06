@@ -5,9 +5,11 @@ import android.util.Log;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Scout implements Runnable {
-    private ScoutEvent mListener;
+    private List<ScoutEvent> mListeners = new ArrayList<ScoutEvent>();
     private String nombre;
     //private NetworkInterface iface;
     private static MulticastSocket socket;
@@ -16,6 +18,7 @@ public class Scout implements Runnable {
     //private Boolean status;
     private DatagramPacket packet;
     private byte[] buffer;
+    private final String tag = "ScoutInstance";
 
     public Scout(String name) {
         this.nombre = name;
@@ -36,38 +39,46 @@ public class Scout implements Runnable {
     }
 
     public void setScoutEventListener(ScoutEvent listener){
-        this.mListener = listener;
+        this.mListeners.add(listener);
+    }
+    public void removeScoutEventListener(ScoutEvent listener){
+        this.mListeners.remove(listener);
     }
 
     @Override
     public void run() {
         //this.status = true;
-        while(!Thread.currentThread().isInterrupted()){
-            try {
-                //mListener.onRecieve("ScoutIniciado".getBytes(),serviceAddr,servicePort);
-                //Log.i("Scout","Esperando un mensaje: "+socket.getNetworkInterface().getName());
-                //this.socket.setTimeToLive(30);
-                socket.receive(packet);
-                //Log.i("Scout","Se recibio un mensaje.");
+        //while(!Thread.currentThread().isInterrupted()){
+        try {
+            //mListener.onRecieve("ScoutIniciado".getBytes(),serviceAddr,servicePort);
+            //Log.i("Scout","Esperando un mensaje: "+socket.getNetworkInterface().getName());
+            //this.socket.setTimeToLive(30);
+            socket.receive(packet);
+            //Log.i(tag,"Se recibio un mensaje.");
 
-                mListener.onRecieve(packet.getData(),packet.getAddress(),packet.getPort());
 
-            }catch(Exception e){
-                mListener.onRecieve(e.getMessage().getBytes(),serviceAddr,servicePort);
-            }
+            launchOnRecieve(packet.getData(),packet.getAddress(),packet.getPort());
+
+        }catch(Exception e){
+            launchOnRecieve(e.getMessage().getBytes(),serviceAddr,servicePort);
         }
+        //}
         this.closeScout();
     }
 
-    public void closeScout(){
+    private void closeScout(){
         try {
-
-            mListener.onRecieve("Saliendo.".getBytes(),this.serviceAddr,this.servicePort);
-
+            Log.i(tag, "Cerrando Scout Thread.");
             socket.leaveGroup(serviceAddr);
             socket.close();
         }catch(Exception e) {
             e.printStackTrace();
+        }
+    }
+
+    private void launchOnRecieve(byte[] mData, InetAddress mAddr, int mPort){
+        for(ScoutEvent listener : this.mListeners){
+            listener.onRecieve(mData, mAddr, mPort);
         }
     }
 }
