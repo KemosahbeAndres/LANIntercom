@@ -92,6 +92,7 @@ public class MainActivity extends AppCompatActivity {
             try {
                 fos = openFileOutput(configFile, Context.MODE_PRIVATE);
                 fos.close();
+
             }catch(FileNotFoundException e){
                 e.printStackTrace();
             }catch(IOException ioe){
