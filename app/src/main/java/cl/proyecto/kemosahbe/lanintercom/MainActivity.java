@@ -1,10 +1,12 @@
 package cl.proyecto.kemosahbe.lanintercom;
 
+import android.Manifest;
 import android.app.Service;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.content.pm.PackageManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.wifi.WifiInfo;
@@ -15,63 +17,87 @@ import android.os.IBinder;
 import android.os.Message;
 import android.os.Messenger;
 import android.os.RemoteException;
+import android.support.annotation.NonNull;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuInflater;
 import android.view.View;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
-import android.widget.Toast;
-
-import org.w3c.dom.Text;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.DatagramPacket;
-import java.net.DatagramSocket;
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.MulticastSocket;
 import java.net.NetworkInterface;
-import java.net.SocketException;
-import java.net.StandardProtocolFamily;
-import java.net.StandardSocketOptions;
 import java.nio.channels.DatagramChannel;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.List;
-import java.util.Locale;
 import java.util.Properties;
-import java.util.UUID;
 
 public class MainActivity extends AppCompatActivity {
-    public final String configFile = "Config.properties";
-    private FileInputStream fis;
-    private FileOutputStream fos;
+    public final String userConfigFile = "Config/user.properties";
+    public final String roomsConfigFile = "Config/rooms.properties";
+    private FileInputStream fis = null;
+    private FileOutputStream fos = null;
     private Properties properties;
-    TextView txt;
-    EditText msg;
     Boolean iniciado = false;
     final String tag = "MAIN";
     private Messenger messenger, sMessenger;
     WifiManager wm;
     WifiManager.MulticastLock ml;
 
+    TextView mediatxt, handtxt;
+    //Button mediabtn, handbtn;
+    Boolean mediaon = false, handon = false;
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        MenuInflater inflater = getMenuInflater();
+        inflater.inflate(R.menu.barmenu, menu);
+        return true;
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         //initProperties();
+
+        //mediabtn = (Button) findViewById(R.id.mediabtn);
+        mediatxt = (TextView) findViewById(R.id.mediatxt);
+        //handbtn = (Button) findViewById(R.id.handbtn);
+        handtxt = (TextView) findViewById(R.id.handtxt);
+
+
         Log.i(tag, "Servicio Creado: "+Thread.currentThread().getName()+" ("+Thread.currentThread().getId()+")");
+
+
+        if(ContextCompat.checkSelfPermission(this,
+                Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED){
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.RECORD_AUDIO},0);
+            Log.i(tag,"Permisos para grabar garantizados");
+        }else{
+            Log.i(tag,"No hay permisos");
+        }
+
         //UUID uuid = UUID.fromString("AndresCubillos");
         //Log.i(tag, ""+uuid.toString());
-        txt = (TextView) findViewById(R.id.texto);
-        msg = (EditText) findViewById(R.id.msg);
-        txt.setText("Servicio No iniciado");
+        //txt = (TextView) findViewById(R.id.texto);
+        //msg = (EditText) findViewById(R.id.msg);
+        //txt.setText("Servicio No iniciado");
         //Comprobar que el dispositivo este conectado a una red WIFI
         //Admitir Multicast.
         wm = (WifiManager)getApplicationContext().getSystemService(Context.WIFI_SERVICE);
@@ -83,23 +109,16 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void initProperties(){
-        //Intentar leer archivo de configuracion.
-        try {
-            fis = new FileInputStream(configFile);
-        }catch(FileNotFoundException ex){
-            Log.i(tag, "Archivo de configuracion no encontrado.\n\rCreando archivo de configuracion.");
-            try {
-                fos = openFileOutput(configFile, Context.MODE_PRIVATE);
-                fos.close();
-
-            }catch(FileNotFoundException e){
-                e.printStackTrace();
-            }catch(IOException ioe){
-                ioe.printStackTrace();
-            }
-        }finally {
-            //codigo para tratar el archivo de configuracion.
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        switch(requestCode){
+            case 0:
+                if(grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED){
+                    Log.i(tag, "Permisos Garantizados");
+                }else{
+                    Log.i(tag, "Permisos Garantizados");
+                }
+                break;
         }
     }
 
@@ -109,12 +128,86 @@ public class MainActivity extends AppCompatActivity {
         messenger = new Messenger(new mHandler());
     }
 
+    private void loadUserProperties(){
+        //Intentar leer archivo de configuracion.
+        try {
+            fis = new FileInputStream(userConfigFile);
+        }catch(FileNotFoundException e){
+            Log.i(tag, "Archivo de configuracion no encontrado.\n\rCreando archivo de configuracion.");
+            try {
+                fos = openFileOutput(userConfigFile, Context.MODE_PRIVATE);
+                fos.close();
+            }catch(FileNotFoundException e2){
+                e2.printStackTrace();
+            }catch(IOException ioe){
+                ioe.printStackTrace();
+            }
+        }finally {
+            //codigo para tratar el archivo de configuracion.
+        }
+    }
+
+    private Boolean loadRoomsProperties(){
+        try {
+            fis = new FileInputStream(roomsConfigFile);
+        } catch (FileNotFoundException e){return false;}
+
+        return true;
+    }
+
+    public String getLocalAddress(){
+        List<InetAddress> addrs;
+        String address = "";
+        try{
+            List<NetworkInterface> interfaces = Collections.list(NetworkInterface.getNetworkInterfaces());
+            for(NetworkInterface intf : interfaces){
+                addrs = Collections.list(intf.getInetAddresses());
+                for(InetAddress addr : addrs){
+                    if(!addr.isLoopbackAddress() && addr instanceof Inet4Address){
+                        address = addr.getHostAddress();
+                    }
+                }
+            }
+        }catch (Exception e){
+            Log.i(tag, "Ex getting IP value " + e.getMessage());
+        }
+        return address;
+    }
+
+    public void media(View view) {
+        Intent intent = new Intent(this, MultimediaService.class);
+        Bundle mBundle = new Bundle();
+        mBundle.putBoolean(MultimediaService.MIC_STATE, true);
+        mBundle.putBoolean(MultimediaService.SOUND_STATE, true);
+        mBundle.putString(MultimediaService.SRV_ADDRESS, "230.255.255.100");
+        mBundle.putInt(MultimediaService.SRV_PORT, 1800);
+        intent.putExtras(mBundle);
+
+        if(mediaon){
+            try{
+                stopService(intent);
+                mediatxt.setText("Servicio Apagado");
+                mediaon = false;
+            }catch(Exception e){
+                e.printStackTrace();
+            }
+        }else{
+            startService(intent);
+            mediatxt.setText("Servicio Iniciado");
+            mediaon = true;
+        }
+    }
+
+    public void hand(View view){
+        iniciar(view);
+    }
+
     public void iniciar(View v){
-        Intent intent = new Intent(this, ScoutService.class);
+        Intent intent = new Intent(this, HandshakeService.class);
         if(iniciado){
             try {
                 unbindService(mConnection);
-                txt.setText("Servicio Detenido");
+                handtxt.setText("Servicio Apagado");
                 iniciado = false;
             }catch(Exception e){
                 e.printStackTrace();
@@ -125,7 +218,7 @@ public class MainActivity extends AppCompatActivity {
                 intent.putExtra("serverAddress","230.255.255.200");
                 intent.putExtra("serverPort", 1800);
                 bindService(intent, mConnection, Service.BIND_AUTO_CREATE);
-                txt.setText("Servicio Iniciado");
+                handtxt.setText("Servicio Iniciado");
                 iniciado = true;
             } catch (Exception e) {
                 e.printStackTrace();
@@ -141,12 +234,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public void enviar(View v){
-        String mensaje = msg.getText().toString();
-        Log.i(tag,"Mensaje: "+mensaje);
-        mAsyncTask mTask = new mAsyncTask(mensaje);
-        mTask.execute();
-    }
+
 
     class mAsyncTask extends AsyncTask<Void,Boolean,Integer>{
         private MulticastSocket socket;
@@ -318,22 +406,6 @@ public class MainActivity extends AppCompatActivity {
                 channel.socket().setBroadcast(true);
                 //channel.setOption(StandardSocketOptions.IP_MULTICAST_TTL, 1);
             } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-    }
-
-    public void enviarObsolete(View v){
-        String mensaje = msg.getText().toString();
-        if (mensaje != "") {
-            Bundle mBundle = new Bundle();
-            mBundle.putString("mensaje", mensaje);
-            Log.i(tag,"Mensaje: "+mensaje);
-            Message mMessage = Message.obtain();
-            mMessage.setData(mBundle);
-            try {
-                sMessenger.send(mMessage);
-            } catch (RemoteException e) {
                 e.printStackTrace();
             }
         }

@@ -20,7 +20,7 @@ import java.net.MulticastSocket;
 import java.net.SocketException;
 import java.nio.ByteBuffer;
 
-public class ScoutService extends Service implements ScoutEvent {
+public class HandshakeService extends Service implements ScoutEvent {
 
     //Variables Privadas
     //private
@@ -30,7 +30,7 @@ public class ScoutService extends Service implements ScoutEvent {
     private Thread th;
 
     //Constantes
-    private final String tag = "ScoutService";
+    private final String tag = "HandshakeService";
 
     @Override
     public void onCreate() {
